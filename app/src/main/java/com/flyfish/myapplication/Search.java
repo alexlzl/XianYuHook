@@ -96,7 +96,8 @@ public class Search implements IXposedHookLoadPackage {
                         if ("mtop.taobao.idle.search.glue".equals(api)) {
                             byte[] jsonObject = (byte[]) XposedHelpers.getObjectField(param.thisObject, "bytedata");
                             if (jsonObject != null && jsonObject.length > 0) {
-                                log(new String(jsonObject));
+//                                log(new String(jsonObject));
+                                XposedBridge.log("MtopResponse=========="+new String(jsonObject));
                             }
 
                         }
@@ -108,7 +109,6 @@ public class Search implements IXposedHookLoadPackage {
 
 
     private void handle_k(LoadPackageParam lpparam) throws ClassNotFoundException {
-        XposedBridge.log("执行handle_k");
         Class<?> SignImpl = lpparam.classLoader.loadClass("mtopsdk.security.InnerSignImpl");
         Class<?> Config = lpparam.classLoader.loadClass("mtopsdk.mtop.global.MtopConfig");
         Class<?> UTUtdid = lpparam.classLoader.loadClass("com.ta.utdid2.device.UTUtdid");
@@ -133,7 +133,6 @@ public class Search implements IXposedHookLoadPackage {
                         super.beforeHookedMethod(param);
                         //
                         //                                     log(new Gson().toJson(param.args));
-                        XposedBridge.log("before===getUnifiedSign");
                         runDetail();
                         runSearch();
 
@@ -251,7 +250,7 @@ public class Search implements IXposedHookLoadPackage {
                             }
                             String itemId = "617713196977";
 
-                            log("requestdetil");
+//                            log("requestdetil");
 
                             searchDetail(itemId);
                         }
@@ -457,13 +456,14 @@ public class Search implements IXposedHookLoadPackage {
                 new Callback() {
                     @Override
                     public void onFailure(Call call, IOException e) {
-                        log(e + "失败");
-
+//                        log(e + "失败");
+          XposedBridge.log("搜索失败"+e);
                     }
 
                     @Override
                     public void onResponse(Call call, Response response) throws IOException {
-                        log("车祸" + response.body().string());
+//                        log("车祸" + response.body().string());
+                        XposedBridge.log("搜索成功"+response.body().string());
                     }
                 });
 
