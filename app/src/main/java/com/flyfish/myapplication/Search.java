@@ -1,29 +1,20 @@
 package com.flyfish.myapplication;
 
-import static de.robv.android.xposed.XposedHelpers.callMethod;
-import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
-import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
-
-import java.io.IOException;
-import java.net.Proxy;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-
-import javax.xml.parsers.FactoryConfigurationError;
+import android.content.Context;
+import android.os.Bundle;
+import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import android.accessibilityservice.GestureDescription.StrokeDescription;
-import android.content.Context;
-import android.content.pm.PackageInfo;
-import android.os.Parcel;
-import android.util.Log;
-import android.webkit.WebView;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Random;
+
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
@@ -33,17 +24,15 @@ import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.FormBody;
 import okhttp3.Headers;
-import okhttp3.Interceptor;
-import okhttp3.Interceptor.Chain;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Request.Builder;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 
+import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
+import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
+
 /**
- *
  * Created on 2020-05-02
  */
 
@@ -69,54 +58,88 @@ public class Search implements IXposedHookLoadPackage {
 
     }
 
-    public static String getRandomString(String extra, int length) {
-        String str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" + extra;
-        StringBuilder res = new StringBuilder();
-        for (int i = 0; i < length; i++) {
-            res.append(str.charAt(randBetween(0, str.length())));
-        }
-        return res.toString();
-    }
-
-    public static int randBetween(int min, int max) {
-        int range = Math.abs(min - max);
-        if (range == 0) {
-            return min;
-        }
-        int pos = new Random().nextInt(range);
-        return Math.min(min, max) + pos;
-    }
-
-
-    private void getKeyWords() {
-        try {
-            String string =
-                    new OkHttpClient().newCall(new Builder().url("http://123.56.63.113/keywords").build()).execute()
-                            .body()
-                            .string();
-            List<String> o = new Gson().fromJson(string, new TypeToken<List<String>>() {
-            }.getType());
-            if (o != null && o.size() > 0) {
-                keywords.clear();
-                keywords.addAll(o);
-            }
-            XposedBridge.log(keywords + "");
-
-        } catch (Exception e) {
-            XposedBridge.log("error" + e.getMessage() + "");
-        }
-
-
-    }
-
     private void handle_xianyu(LoadPackageParam lpparam) throws ClassNotFoundException {
         if (lpparam.packageName.equals("com.taobao.idlefish")) {
             handle_i(lpparam);
             handle_k(lpparam);
+            hookLogin(lpparam);
         }
     }
 
+    private void handSearch(LoadPackageParam lpparam){
+
+
+    }
+
+    private void handle_i(LoadPackageParam lpparam) throws ClassNotFoundException {
+        XposedBridge.log("hook======handle_i");
+        Class<?> aClass = lpparam.classLoader.loadClass("mtopsdk.mtop.global.SwitchConfig");
+
+        findAndHookMethod(aClass, "rW", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                param.setResult(false);
+            }
+        });
+
+        findAndHookMethod(aClass, "rX", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                param.setResult(false);
+            }
+        });
+
+        findAndHookMethod("mtopsdk.mtop.domain.MtopResponse", lpparam.classLoader, "parseJsonByte",
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        super.afterHookedMethod(param);
+
+                        String api = XposedHelpers.getObjectField(param.thisObject, "api").toString();
+
+                        if ("mtop.taobao.idle.search.glue".equals(api)) {
+                            byte[] jsonObject = (byte[]) XposedHelpers.getObjectField(param.thisObject, "bytedata");
+                            if (jsonObject != null && jsonObject.length > 0) {
+                                log(new String(jsonObject));
+                            }
+
+                        }
+                    }
+                });
+
+
+    }
+
+    private void hookLogin(final LoadPackageParam lpparam)throws ClassNotFoundException{
+        final Class<?> alarmClacc = lpparam.classLoader.loadClass("com.alibaba.wireless.security.open.middletier.fc.ui.ContainerActivity");
+        findAndHookMethod(alarmClacc, "onCreate", Bundle.class,new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                XposedBridge.log("ContainerActivity==执行=====back====afterHookedMethod");
+                //不能通过Class.forName()来获取Class ，在跨应用时会失效
+                Method finish=alarmClacc.getDeclaredMethod("onBackPressed",null);
+                finish.setAccessible(true);
+                finish.invoke(param.thisObject,null);
+                param.setResult(null);
+            }
+        });
+        final Class<?> loginClass = lpparam.classLoader.loadClass("com.ali.user.mobile.login.ui.UserLoginActivity");
+        findAndHookMethod(loginClass, "onCreate", Bundle.class,new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                XposedBridge.log("UserLoginActivity==执行=====back====afterHookedMethod");
+                //不能通过Class.forName()来获取Class ，在跨应用时会失效
+                Method finish=loginClass.getDeclaredMethod("onBackPressed",null);
+                finish.setAccessible(true);
+                finish.invoke(param.thisObject,null);
+                param.setResult(null);
+            }
+        });
+    }
+
+
     private void handle_k(LoadPackageParam lpparam) throws ClassNotFoundException {
+        XposedBridge.log("执行handle_k");
         Class<?> SignImpl = lpparam.classLoader.loadClass("mtopsdk.security.InnerSignImpl");
         Class<?> Config = lpparam.classLoader.loadClass("mtopsdk.mtop.global.MtopConfig");
         Class<?> UTUtdid = lpparam.classLoader.loadClass("com.ta.utdid2.device.UTUtdid");
@@ -139,7 +162,9 @@ public class Search implements IXposedHookLoadPackage {
                         signImpl = param.thisObject;
                         //                        search("iphonex");
                         super.beforeHookedMethod(param);
-                        //                                                log(new Gson().toJson(param.args));
+                        //
+                        //                                     log(new Gson().toJson(param.args));
+                        XposedBridge.log("before===getUnifiedSign");
                         runDetail();
                         runSearch();
 
@@ -206,7 +231,6 @@ public class Search implements IXposedHookLoadPackage {
 
 
     }
-
     private void runDetail() {
         synchronized (Search.class) {
             XposedBridge.log("run detail");
@@ -232,7 +256,19 @@ public class Search implements IXposedHookLoadPackage {
             }
         }
     }
-
+    private void searchDetail(String itemId) {
+        DetailInfo detailInfo = new DetailInfo(itemId);
+        String term = new Gson().toJson(detailInfo);
+        HashMap<String, String> p =
+                new Gson().fromJson(term,
+                        new TypeToken<HashMap<String, String>>() {
+                        }.getType());
+        HashMap<String, String> signs = (HashMap<String, String>) XposedHelpers
+                .callMethod(signImpl, "getUnifiedSign", p, null, "21407387",
+                        null,
+                        false);
+        requestDetail(detailInfo, signs);
+    }
     private void runSearch() {
         synchronized (Search.class) {
             if (!isStart) {
@@ -267,22 +303,53 @@ public class Search implements IXposedHookLoadPackage {
         }
 
     }
-
-    private void searchDetail(String itemId) {
-        DetailInfo detailInfo = new DetailInfo(itemId);
-        String term = new Gson().toJson(detailInfo);
-        HashMap<String, String> p =
-                new Gson().fromJson(term,
-                        new TypeToken<HashMap<String, String>>() {
-                        }.getType());
-        HashMap<String, String> signs = (HashMap<String, String>) XposedHelpers
-                .callMethod(signImpl, "getUnifiedSign", p, null, "21407387",
-                        null,
-                        false);
-        requestDetail(detailInfo, signs);
+    public static String getRandomString(String extra, int length) {
+        String str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" + extra;
+        StringBuilder res = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            res.append(str.charAt(randBetween(0, str.length())));
+        }
+        return res.toString();
     }
 
+    public static int randBetween(int min, int max) {
+        int range = Math.abs(min - max);
+        if (range == 0) {
+            return min;
+        }
+        int pos = new Random().nextInt(range);
+        return Math.min(min, max) + pos;
+    }
+
+
+    private void getKeyWords() {
+        try {
+            String string =
+                    new OkHttpClient().newCall(new Builder().url("http://123.56.63.113/keywords").build()).execute()
+                            .body()
+                            .string();
+            List<String> o = new Gson().fromJson(string, new TypeToken<List<String>>() {
+            }.getType());
+            if (o != null && o.size() > 0) {
+                keywords.clear();
+                keywords.addAll(o);
+            }
+            XposedBridge.log(keywords + "");
+
+        } catch (Exception e) {
+            XposedBridge.log("error" + e.getMessage() + "");
+        }
+
+
+    }
+
+
+
+
+
+
     private void requestDetail(DetailInfo searchInfo, HashMap<String, String> signs) {
+        XposedBridge.log("请求详情==============");
         String sgext = URLEncoder.encode(signs.get("x-sgext"));
         String umt = URLEncoder.encode(signs.get("x-umt"));
         String sign = URLEncoder.encode(signs.get("x-sign"));
@@ -415,41 +482,6 @@ public class Search implements IXposedHookLoadPackage {
         XposedBridge.log(msg);
     }
 
-    private void handle_i(LoadPackageParam lpparam) throws ClassNotFoundException {
-        Class<?> aClass = lpparam.classLoader.loadClass("mtopsdk.mtop.global.SwitchConfig");
-        findAndHookMethod(aClass, "rW", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                param.setResult(false);
-            }
-        });
-
-        findAndHookMethod(aClass, "rX", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                param.setResult(false);
-            }
-        });
-
-        findAndHookMethod("mtopsdk.mtop.domain.MtopResponse", lpparam.classLoader, "parseJsonByte",
-                new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        super.afterHookedMethod(param);
-
-                        String api = XposedHelpers.getObjectField(param.thisObject, "api").toString();
-
-                        if ("mtop.taobao.idle.search.glue".equals(api)) {
-                            byte[] jsonObject = (byte[]) XposedHelpers.getObjectField(param.thisObject, "bytedata");
-                            if (jsonObject != null && jsonObject.length > 0) {
-                                log(new String(jsonObject));
-                            }
-
-                        }
-                    }
-                });
-
-    }
 
     public static String getRandomNumber(int count) {
         StringBuilder sb = new StringBuilder();
