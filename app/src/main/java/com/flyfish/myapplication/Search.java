@@ -66,10 +66,6 @@ public class Search implements IXposedHookLoadPackage {
         }
     }
 
-    private void handSearch(LoadPackageParam lpparam){
-
-
-    }
 
     private void handle_i(LoadPackageParam lpparam) throws ClassNotFoundException {
         XposedBridge.log("hook======handle_i");
@@ -108,33 +104,6 @@ public class Search implements IXposedHookLoadPackage {
                 });
 
 
-    }
-
-    private void hookLogin(final LoadPackageParam lpparam)throws ClassNotFoundException{
-        final Class<?> alarmClacc = lpparam.classLoader.loadClass("com.alibaba.wireless.security.open.middletier.fc.ui.ContainerActivity");
-        findAndHookMethod(alarmClacc, "onCreate", Bundle.class,new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                XposedBridge.log("ContainerActivity==执行=====back====afterHookedMethod");
-                //不能通过Class.forName()来获取Class ，在跨应用时会失效
-                Method finish=alarmClacc.getDeclaredMethod("onBackPressed",null);
-                finish.setAccessible(true);
-                finish.invoke(param.thisObject,null);
-                param.setResult(null);
-            }
-        });
-        final Class<?> loginClass = lpparam.classLoader.loadClass("com.ali.user.mobile.login.ui.UserLoginActivity");
-        findAndHookMethod(loginClass, "onCreate", Bundle.class,new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                XposedBridge.log("UserLoginActivity==执行=====back====afterHookedMethod");
-                //不能通过Class.forName()来获取Class ，在跨应用时会失效
-                Method finish=loginClass.getDeclaredMethod("onBackPressed",null);
-                finish.setAccessible(true);
-                finish.invoke(param.thisObject,null);
-                param.setResult(null);
-            }
-        });
     }
 
 
@@ -231,6 +200,41 @@ public class Search implements IXposedHookLoadPackage {
 
 
     }
+
+    /**
+     * @ describe  hook登录页面和网络警告页面
+     * @author lzl
+     * @ time 2020/6/5 15:18
+     * @ param
+     * @ return
+     */
+    private void hookLogin(final LoadPackageParam lpparam) throws ClassNotFoundException {
+        final Class<?> alarmClacc = lpparam.classLoader.loadClass("com.alibaba.wireless.security.open.middletier.fc.ui.ContainerActivity");
+        findAndHookMethod(alarmClacc, "onCreate", Bundle.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                XposedBridge.log("ContainerActivity==执行=====back====afterHookedMethod");
+                //不能通过Class.forName()来获取Class ，在跨应用时会失效
+                Method finish = alarmClacc.getDeclaredMethod("onBackPressed", null);
+                finish.setAccessible(true);
+                finish.invoke(param.thisObject, null);
+                param.setResult(null);
+            }
+        });
+        final Class<?> loginClass = lpparam.classLoader.loadClass("com.ali.user.mobile.login.ui.UserLoginActivity");
+        findAndHookMethod(loginClass, "onCreate", Bundle.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                XposedBridge.log("UserLoginActivity==执行=====back====afterHookedMethod");
+                //不能通过Class.forName()来获取Class ，在跨应用时会失效
+                Method finish = loginClass.getDeclaredMethod("onBackPressed", null);
+                finish.setAccessible(true);
+                finish.invoke(param.thisObject, null);
+                param.setResult(null);
+            }
+        });
+    }
+
     private void runDetail() {
         synchronized (Search.class) {
             XposedBridge.log("run detail");
@@ -256,6 +260,7 @@ public class Search implements IXposedHookLoadPackage {
             }
         }
     }
+
     private void searchDetail(String itemId) {
         DetailInfo detailInfo = new DetailInfo(itemId);
         String term = new Gson().toJson(detailInfo);
@@ -269,6 +274,7 @@ public class Search implements IXposedHookLoadPackage {
                         false);
         requestDetail(detailInfo, signs);
     }
+
     private void runSearch() {
         synchronized (Search.class) {
             if (!isStart) {
@@ -303,6 +309,7 @@ public class Search implements IXposedHookLoadPackage {
         }
 
     }
+
     public static String getRandomString(String extra, int length) {
         String str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" + extra;
         StringBuilder res = new StringBuilder();
@@ -342,10 +349,6 @@ public class Search implements IXposedHookLoadPackage {
 
 
     }
-
-
-
-
 
 
     private void requestDetail(DetailInfo searchInfo, HashMap<String, String> signs) {
